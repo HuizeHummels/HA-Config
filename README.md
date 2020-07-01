@@ -1,0 +1,2 @@
+# Huize Hummels HA config
+ 

@@ -1,0 +1,438 @@
+- id: rpi_power_issue
+  alias: Power Problem Notification
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.rpi_power_status
+    value_template: '{{ state.attributes.value }}'
+    above: 0
+    for:
+      minutes: 5
+  action:
+  - service: persistent_notification.create
+    data_template:
+      message: "RPI Power reported {{ states.sensor.rpi_power_status.state }}. The state had changed from {{ trigger.from_state.state }} "
+      title: Power Supply Issue
+  - service: notify.notify
+    data_template:
+      message: "RPI Power reported {{ states.sensor.rpi_power_status.state }}. The state had  changed from {{ trigger.from_state.state }}"
+      title: Power Supply Issue
+
+- id: '1578060156228'
+  alias: '[System] New Repo In Hacs'
+  description: ''
+  trigger:
+  - event_data:
+      action: registration
+    event_type: hacs/repository
+    platform: event
+  condition:
+  - condition: template
+    value_template: '"{{ trigger.event.data.repository is defined }}"'
+  action:
+  - data_template:
+      message: '{% set repo = trigger.event.data.repository %} {% set id = trigger.event.data.repository_id
+        %} [{{ repo }}](/hacs/repository/{{ id }}) was just added to HACS.'
+      title: New repository in HACS
+    service: persistent_notification.create
+- id: Afvalinzameling morgen
+  alias: '[Datum-Tijd] Afvalinzameling melding'
+  trigger:
+  - at: '17:30:00'
+    platform: time
+  condition:
+  - condition: template
+    value_template: '{{ states(''sensor.afvalinfo_tomorrow_formatted'') != ''Geen''
+      }} '
+  action:
+  - data_template:
+      message: '{{ states(''sensor.afvalinfo_tomorrow_formatted'') }} wordt morgen
+        opgehaald!'
+      title: '{{ now().strftime(''%d %B'') }}: Afvalmelding morgen'
+    service: notify.mail_notify
+  - data_template:
+      message: '{{ states(''sensor.afvalinfo_tomorrow_formatted'') }} wordt morgen
+        opgehaald!'
+      notification_id: '{{ states(''sensor.afvalinfo_tomorrow'') }}-trash-notification'
+      title: '{{ now().strftime(''%d %B'') }}: Afvalmelding morgen'
+    service: persistent_notification.create
+  initial_state: 'on'
+- id: '1584103180301'
+  alias: '[RF Schakelaar] Keuken'
+  description: ''
+  trigger:
+  - entity_id: binary_sensor.rf_schakelaar_keuken
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - data: {}
+    entity_id: light.keuken
+    service: light.toggle
+- id: '1584103292112'
+  alias: '[RF Schakelaar] Eetkamer'
+  description: ''
+  trigger:
+  - entity_id: binary_sensor.rf_schakelaar_eetkamer
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - data: {}
+    entity_id: light.eetkamer
+    service: light.toggle
+- id: '1582221504236'
+  alias: '[RF Schakelaar] Lamp Hobbykamer'
+  description: ''
+  trigger:
+  - entity_id: binary_sensor.rf_schakelaar_hobbyhoek_alwin, binary_sensor.rf_schakelaar_hobbyhoek_renate
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - entity_id: light.kantoor
+    service: light.toggle
+- id: '1582221504225'
+  alias: '[RF Schakelaar] Bedlamp Renate'
+  description: ''
+  trigger:
+  - entity_id: binary_sensor.rf_schakelaar_slaapkamer_renate, binary_sensor.rf_schakelaar_slaapkamer_alwin_2
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - entity_id: light.bedamp_renate
+    service: light.toggle
+- id: '1582221832225'
+  alias: '[RF Schakelaar] Bedlamp Alwin'
+  description: ''
+  trigger:
+  - entity_id: binary_sensor.rf_schakelaar_slaapkamer_alwin_1
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - entity_id: light.bedlamp_alwin
+    service: light.toggle
+- id: '1584112667375'
+  alias: '[RF Schakelaar] Toilet'
+  description: ''
+  trigger:
+  - entity_id: binary_sensor.rf_schakelaar_toilet
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - data: {}
+    entity_id: light.toilet
+    service: light.toggle
+- id: Schakel de donkere modus in
+  alias: '[Frontend] Schakel de donkere modus in'
+  trigger:
+  - at: '20:00'
+    platform: time
+  action:
+  - entity_id: input_boolean.dark_mode
+    service: input_boolean.turn_on
+- id: Schakel de lichte modus in
+  alias: '[Frontend] Schakel de lichte modus in'
+  trigger:
+    platform: time
+    at: 06:00
+  action:
+    entity_id: input_boolean.dark_mode
+    service: input_boolean.turn_off
+- id: Thema wijzigen
+  alias: '[Frontend] Thema wijzigen'
+  trigger:
+  - entity_id: input_select.theme
+    platform: state
+  - entity_id: input_boolean.dark_mode
+    platform: state
+  - entity_id: input_boolean.theme_alternative
+    platform: state
+  - event: start
+    platform: homeassistant
+  action:
+  - data_template:
+      name: '{% set which = " Nightmode" if is_state("input_boolean.dark_mode", "on") else
+        " Daymode" -%} {% set name = states("input_select.theme") -%} {% set suffix =
+        "-alternative" if is_state("input_boolean.theme_alternative", "on") else ""
+        -%} {{ name }}{{ which }}{{ suffix }}'
+    service: frontend.set_theme
+- id: Startup notification
+  alias: '[Home Assistant] Opstartmelding'
+  trigger:
+  - event: start
+    platform: homeassistant
+  action:
+  - data:
+      entity_id: automation.home_assistant_opstartmelding
+    service: automation.turn_off
+  - data:
+      message: "{% set message = [\n  \"\U0001F44D Home Assistant is opnieuw opgestart\
+        \ om {{ as_timestamp(now()) | timestamp_custom('%H:%M', true) }}\",\n  \"\U0001F3E1\
+        \ Home Assistant online om {{ as_timestamp(now()) | timestamp_custom('%H:%M',\
+        \ true) }}\",\n  \"✅ Home Assistant is gestart om {{ as_timestamp(now()) |\
+        \ timestamp_custom('%H:%M', true) }}\"\n] %} {{ message|random }}    "
+      title: '*Home Assistant*'
+    service: notify.alwin
+  - data: {}
+    entity_id: switch.circadian_lighting_badkamer, switch.circadian_lighting_bedlampjes,
+      switch.circadian_lighting_gang, switch.circadian_lighting_hal, switch.circadian_lighting_hobbykamer,
+      switch.circadian_lighting_schuur, switch.circadian_lighting_eetkamer, switch.circadian_lighting_toilet
+    service: switch.turn_on
+  initial_state: 'on'
+- id: shutdown_notification
+  alias: '[Home Assistant] Afsluitmelding'
+  trigger:
+  - event_type: homeassistant_stop
+    platform: event
+  action:
+  - data:
+      message: ❌Home Assistant is gestopt om {{ as_timestamp(now()) | timestamp_custom('%H:%M',
+        true) }}
+      title: '*Home Assistant*'
+    service: notify.alwin
+- id: '1589044332244'
+  alias: '[Sensor] Schakel badkamerverlichting in als er beweging is'
+  description: ''
+  trigger:
+  - entity_id: binary_sensor.rf_motion_sensor_badkamer, binary_sensor.presence_3
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - data:
+      transition: 15
+    entity_id: light.badkamer
+    service: light.turn_on
+  - data: {}
+    entity_id: timer.badkamer
+    service: timer.start
+- id: '1589045106929'
+  alias: '[Sensor] Schakel badkamerverlichting 3 minuten na activering uit'
+  description: ''
+  trigger:
+  - event_data:
+      entity_id: timer.badkamer
+    event_type: timer.finished
+    platform: event
+  condition: []
+  action:
+  - entity_id: light.badkamer
+    service: light.turn_off
+- id: '1589099849664'
+  alias: '[Sensor] Schakel halverlichting in als er beweging is'
+  description: ''
+  trigger:
+  - entity_id: binary_sensor.rf_motion_sensor_hal
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - data:
+      transition: 15
+    entity_id: light.hal
+    service: light.turn_on
+  - data: {}
+    entity_id: timer.hal
+    service: timer.start
+- id: '1589100741674'
+  alias: '[Sensor] Schakel halverlichting 5 minuten na activering uit'
+  description: ''
+  trigger:
+  - event_data:
+      entity_id: timer.hal
+    event_type: timer.finished
+    platform: event
+  condition: []
+  action:
+  - entity_id: light.hal
+    service: light.turn_off
+- id: '1589100757874'
+  alias: '[Sensor] Schakel schuurverlichting 1 minuut na activering uit'
+  description: ''
+  trigger:
+  - event_data:
+      entity_id: timer.schuur
+    event_type: timer.finished
+    platform: event
+  condition: []
+  action:
+  - entity_id: light.schuur
+    service: light.turn_off
+- id: '1589100759068'
+  alias: '[Sensor] Schakel gangverlichting 3 minuten na activering uit'
+  description: ''
+  trigger:
+  - event_data:
+      entity_id: timer.gang
+    event_type: timer.finished
+    platform: event
+  condition: []
+  action:
+  - entity_id: light.gang
+    service: light.turn_off
+- id: '1589103304899'
+  alias: '[Sensor] Schakel gangverlichting in als er beweging is'
+  description: ''
+  trigger:
+  - entity_id: binary_sensor.motion_sensor_gang, binary_sensor.rf_motion_sensor_gang
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - data:
+      transition: 15
+    entity_id: light.gang
+    service: light.turn_on
+  - data: {}
+    entity_id: timer.gang
+    service: timer.start
+- id: '1589103323649'
+  alias: '[Sensor] Schakel schuurverlichting in als er beweging is'
+  description: ''
+  trigger:
+  - entity_id: binary_sensor.rf_motion_sensor_schuur
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - data:
+      transition: 15
+    entity_id: light.schuur
+    service: light.turn_on
+  - data: {}
+    entity_id: timer.schuur
+    service: timer.start
+- id: '1589104290050'
+  alias: '[Home Assistant] Updatemelding'
+  description: ''
+  trigger:
+  - entity_id: binary_sensor.updater
+    from: 'off'
+    platform: state
+    to: 'on'
+  condition: []
+  action:
+  - data:
+      message: Home Assistant  {{ state_attr('binary_sensor.updater', 'newest_version')
+        }}  is nu beschikbaar.
+      title: '*Home Assistant Update*'
+    service: notify.alwin
+- id: '1589114939851'
+  alias: '[Media] Licht keuken aan wanneer media player is gepausseerd'
+  description: ''
+  trigger:
+  - entity_id: media_player.android_tv_2, media_player.ziggo_next
+    from: playing
+    platform: state
+    to: paused
+  condition:
+  - after: sunset
+    condition: sun
+  action:
+  - data: {}
+    entity_id: light.keuken
+    service: light.turn_on
+- id: '1589926439851'
+  alias: '[Plant] Update Probleem Planten'
+  trigger:
+  - platform: state
+    entity_id: plant.burgundy_phalaenopsis, plant.chlorophytum_comosum_atlantic, plant.chlorophytum_comosum_green,
+      plant.crassula_arborescens_willd, plant.crassula_marnieriana, plant.dracaena_marginata1,
+      plant.dracaena_marginata2, plant.epipremnum_aureum_golden_pothos, plant.hedera_helix,
+      plant.schefflera_arboricola, plant.tradescantia_pallida, plant.tradescantia_zebrina_quadricolor
+  action:
+  - service: python_script.plant_problems
+- id: '1589121582272'
+  alias: '[Plant] Dagelijkse plant status'
+  description: ''
+  trigger:
+  - at: '12:00:00'
+    platform: time
+  condition: []
+  action:
+  - data:
+      message: '{% if is_state_attr(''sensor.plant_problems'',''water_number'',0)
+        %} Geen van de planten hebben water nodig. {% elif states.sensor.plant_problems.attributes.water_number
+        | float > 0 %} {{states.sensor.plant_problems.attributes.water}} Heeft water
+        nodig. {% endif %} {% if is_state_attr(''sensor.plant_problems'',''fertilize_number'',0)
+        %} Geen van de planten hebben plantenvoeding nodig. {% elif states.sensor.plant_problems.attributes.fertilize_number
+        | float > 0 %} Deze planten {{states.sensor.plant_problems.attributes.fertilize}}
+        hebben planten voeding nodig. {% endif %}
+
+        '
+      title: '*Home Assistant Planten Update*'
+    service: notify.alwin
+- id: '1584197193236'
+  alias: '[Systeem] Cumulatieve regenmeter tot middernacht'
+  description: ''
+  trigger:
+  - at: 00:00:01
+    platform: time
+  condition: []
+  action:
+  - data:
+      data_template:
+        payload: '{"day_1":"{{states.sensor.regen_cumulatief_voorafgaand.state}}"}'
+        retain: true
+        topic: ha/regen_cum_voorafgaand
+    service: mqtt.publish
+- id: '1685463257631'
+  alias: Alarm - Away
+  trigger:
+  - entity_id: binary_sensor.smoke_sensor_158d0001xxxxxx
+    platform: state
+    to: 'on'
+  - entity_id: binary_sensor.door_window_sensor_158d0001xxxxxx
+    platform: state
+    to: 'on'
+  - entity_id: group.all_motion
+    platform: state
+    to: 'on'
+  condition:
+  - condition: state
+    entity_id: alarm_control_panel.woonkamer_alarm
+    state: armed_away
+  action:
+  - entity_id: alarm_control_panel.woonkamer_alarm
+    service: alarm_control_panel.alarm_trigger
+- id: '1685463257632'
+  alias: Alarm!
+  trigger:
+  - entity_id: alarm_control_panel.woonkamer_alarm
+    platform: state
+    to: triggered
+  action:
+  - data:
+      gw_mac: 7811DCDEAF4C
+      ringtone_id: 2
+      ringtone_vol: 2
+    service: xiaomi_aqara.play_ringtone
+- id: '1685463257633'
+  alias: Disarm
+  trigger:
+  - event_data:
+      click_type: long_click_press
+      entity_id: binary_sensor.switch_158d0001xxxxxx
+    event_type: click
+    platform: event
+  action:
+  - data:
+      gw_mac: 7811DCDEAF4C
+      ringtone_id: 11
+      ringtone_vol: 1
+    service: xiaomi_aqara.play_ringtone
+  - entity_id: alarm_control_panel.woonkamer_alarm
+    service: alarm_control_panel.alarm_disarm
+- id: '1685463257634'
+  alias: Disarm!
+  trigger:
+  - platform: state
+    entity_id: alarm_control_panel.woonkamer_alarm
+    to: disarmed
+  action:
+  - service: xiaomi_aqara.stop_ringtone
+    data:
+      gw_mac: 7811DCDEAF4C
